@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>60年投资笔记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin: 30px 0;
+        }
+
+        .section h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+            display: inline-block;
+            padding: 5px 0;
+            transition: color 0.3s;
+        }
+
+        a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+
+        .date-badge {
+            display: inline-block;
+            background: #ecf0f1;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>60年投资笔记</h1>
+        <p class="subtitle">个人投资思考与策略记录</p>
+
+        <div class="section">
+            <h2>📚 所有文章</h2>
+            <ul id="notes-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // 获取所有 Markdown 文件
+        const notes = [
+            "2025-12-22 为什么坚持永不卖出.md",
+            "2025-12-22 定投里程碑.md",
+            "2025-12-22 恒生科技的长期配置意义.md",
+            "2025-12-19 人生如投资.md",
+            "2025-12-18 又是被暴击的一天.md",
+            "2025-12-18 基金份额历史.md",
+            "2025-12-18 基金记账本.md",
+            "2025-12-16 如何长期持有.md",
+            "2025-12-16 个人资产配置.md",
+            "2025-12-16 2026战略.md",
+            "2025-12-15 横盘的思考.md",
+            "2025-12-15 不要融资，不要加杠杆.md",
+            "2025-12-14 投资要趁早.md",
+            "2025-12-14 为什么不配置科创50.md",
+            "2025-12-14 如何选择投资平台.md",
+            "2025-12-14 恒生科技.md",
+            "2025-12-14 投资解决焦虑.md",
+            "2025-12-14 白酒行业分析.md",
+            "2025-12-14 防守资产.md",
+            "2025-12-14 A股选择主动基金.md",
+            "2025-12-14  A股配置.md",
+            "2025-12-14  如何看待下跌.md",
+            "2025-12-14  如何选择投资平台.md",
+            "2025-12-14  定投方式.md",
+            "2025-12-14  恒生科技.md",
+            "2025-12-14  投资解决焦虑.md",
+            "2025-12-14  白酒行业分析.md",
+            "2025-12-14  防守资产.md",
+            "notes.md",
+            "emojis.md"
+        ];
+
+        const list = document.getElementById('notes-list');
+        notes.forEach(note => {
+            const li = document.createElement('li');
+            const match = note.match(/(\d{4}-\d{2}-\d{2})/);
+            const date = match ? match[1] : '';
+            const title = note.replace(/^\d{4}-\d{2}-\d{2}\s*/, '').replace('.md', '');
+
+            li.innerHTML = `
+                ${date ? `<span class="date-badge">${date}</span>` : ''}
+                <a href="${note}">${title}</a>
+            `;
+            list.appendChild(li);
+        });
+    </script>
+</body>
+
+</html>
