@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,7 +32,7 @@
             color: #ecf0f1;
             overflow-y: auto;
             flex-shrink: 0;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         }
 
         .sidebar-header {
@@ -276,6 +277,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- 左侧目录 -->
     <div class="sidebar">
@@ -328,29 +330,29 @@
 
         // 配置 marked
         const renderer = new marked.Renderer();
-        
+
         // 修复图片路径
-        renderer.image = function(href, title, text) {
+        renderer.image = function (href, title, text) {
             // 在渲染时获取基础路径
             const basePath = getBasePath();
             const imagePath = href.startsWith('http') ? href : (basePath ? `${basePath}/${href}` : href);
             return `<img src="${imagePath}" alt="${text}" title="${title || ''}" style="max-width: 100%; height: auto; margin: 20px 0;">`;
         };
-        
+
         marked.setOptions({
             breaks: true,
             gfm: true,
             renderer: renderer,
-            highlight: function(code, lang) {
+            highlight: function (code, lang) {
                 if (lang && hljs.getLanguage(lang)) {
                     try {
                         return hljs.highlight(code, { language: lang }).value;
-                    } catch (err) {}
+                    } catch (err) { }
                 }
                 return hljs.highlightAuto(code).value;
             }
         });
-        
+
         // 初始化基础路径缓存
         getBasePath();
 
@@ -358,7 +360,7 @@
         function renderSidebar() {
             const sidebarContent = document.getElementById('sidebar-content');
             const groupedNotes = {};
-            
+
             // 按日期分组
             notes.forEach(note => {
                 const month = note.date.substring(0, 7); // YYYY-MM
@@ -374,7 +376,7 @@
             sortedMonths.forEach(month => {
                 const section = document.createElement('div');
                 section.className = 'sidebar-section';
-                
+
                 const title = document.createElement('div');
                 title.className = 'sidebar-section-title';
                 title.textContent = month;
@@ -385,15 +387,15 @@
                     item.className = 'sidebar-item';
                     item.dataset.file = note.file;
                     item.onclick = () => loadNote(note.file);
-                    
+
                     const itemTitle = document.createElement('div');
                     itemTitle.className = 'sidebar-item-title';
                     itemTitle.textContent = note.title;
-                    
+
                     const itemDate = document.createElement('div');
                     itemDate.className = 'sidebar-item-date';
                     itemDate.textContent = note.date;
-                    
+
                     item.appendChild(itemTitle);
                     item.appendChild(itemDate);
                     section.appendChild(item);
@@ -407,19 +409,31 @@
         let basePathCache = null;
         function getBasePath() {
             if (basePathCache !== null) return basePathCache;
-            
+
             const path = window.location.pathname;
+            console.log('当前路径:', path);
+
             // 如果路径包含仓库名（不是直接在根域名下），提取基础路径
             const parts = path.split('/').filter(p => p);
-            if (parts.length > 0 && parts[0] !== 'index.html') {
-                // 找到 index.html 的位置
-                const indexPos = path.indexOf('/index.html');
-                if (indexPos > 0) {
-                    basePathCache = path.substring(0, indexPos);
-                    return basePathCache;
-                }
+
+            // 找到 index.html 的位置
+            const indexPos = path.indexOf('/index.html');
+            if (indexPos > 0) {
+                basePathCache = path.substring(0, indexPos);
+                console.log('检测到基础路径:', basePathCache);
+                return basePathCache;
             }
+
+            // 如果没有 index.html，检查是否有其他路径段（可能是仓库名）
+            // 例如：/money/ 或 /money
+            if (parts.length > 0 && parts[0] !== 'index.html' && !parts[0].endsWith('.html')) {
+                basePathCache = '/' + parts[0];
+                console.log('检测到基础路径（无index.html）:', basePathCache);
+                return basePathCache;
+            }
+
             basePathCache = '';
+            console.log('使用空基础路径');
             return '';
         }
 
@@ -438,73 +452,160 @@
 
             try {
                 const basePath = getBasePath();
-                const filePath = basePath ? `${basePath}/${filename}` : filename;
-                
-                const response = await fetch(filePath);
-                if (!response.ok) {
-                    // 如果失败，尝试直接使用文件名
-                    const retryResponse = await fetch(filename);
-                    if (!retryResponse.ok) {
-                        throw new Error(`文件未找到: ${filePath}`);
+                let filePath = basePath ? `${basePath}/${filename}` : filename;
+
+                console.log('尝试加载文件:', filePath);
+                console.log('基础路径:', basePath);
+                console.log('文件名:', filename);
+
+                // 对文件名进行 URL 编码（处理空格和特殊字符）
+                const encodedFilename = encodeURI(filename);
+
+                // 尝试多个路径（优先使用相对路径）
+                const pathsToTry = [
+                    `./${filename}`,  // 相对路径，最常用
+                    `./${encodedFilename}`,  // 编码后的相对路径
+                    filename,          // 直接文件名
+                    encodedFilename,   // 编码后的文件名
+                    filePath,         // 带基础路径
+                    basePath ? `${basePath}/${encodedFilename}` : encodedFilename,  // 编码后的带基础路径
+                    basePath ? `/${basePath}/${filename}` : `/${filename}`,  // 绝对路径
+                    basePath ? `/${basePath}/${encodedFilename}` : `/${encodedFilename}`  // 编码后的绝对路径
+                ];
+
+                let markdown = null;
+                let lastError = null;
+
+                for (const path of pathsToTry) {
+                    try {
+                        console.log('尝试路径:', path);
+                        const response = await fetch(path);
+                        if (response.ok) {
+                            markdown = await response.text();
+                            console.log('成功加载文件:', path);
+                            break;
+                        } else {
+                            console.log('路径失败:', path, response.status);
+                        }
+                    } catch (err) {
+                        console.log('路径错误:', path, err);
+                        lastError = err;
+                        continue;
                     }
-                    const markdown = await retryResponse.text();
-                    await renderContent(markdown, filename);
-                    return;
                 }
-                
-                const markdown = await response.text();
+
+                if (!markdown) {
+                    throw new Error(`无法加载文件: ${filename}。尝试的路径: ${pathsToTry.join(', ')}`);
+                }
+
                 await renderContent(markdown, filename);
             } catch (error) {
-                contentArea.innerHTML = `<div class="error">加载失败: ${error.message}</div>`;
+                console.error('加载错误:', error);
+                contentArea.innerHTML = `
+                    <div class="error">
+                        <h2>加载失败</h2>
+                        <p>错误信息: ${error.message}</p>
+                        <p>文件: ${filename}</p>
+                        <p>请检查浏览器控制台获取更多信息。</p>
+                    </div>`;
             }
         }
 
         // 渲染内容
         async function renderContent(markdown, filename) {
-            const contentArea = document.getElementById('content-area');
-            const note = notes.find(n => n.file === filename);
-            
-            const html = `
-                <div class="content-header">
-                    <h1>${note ? note.title : filename.replace('.md', '')}</h1>
-                    <div class="meta">${note ? note.date : ''}</div>
-                </div>
-                <div class="content-body">
-                    ${marked.parse(markdown)}
-                </div>
-            `;
-            
-            contentArea.innerHTML = html;
-            
-            // 高亮代码
-            contentArea.querySelectorAll('pre code').forEach(block => {
-                hljs.highlightElement(block);
-            });
+            try {
+                const contentArea = document.getElementById('content-area');
+                const note = notes.find(n => n.file === filename);
 
-            // 更新 URL（不刷新页面）
-            const url = new URL(window.location);
-            url.searchParams.set('file', filename);
-            window.history.pushState({}, '', url);
+                // 解析 Markdown
+                let htmlContent;
+                try {
+                    htmlContent = marked.parse(markdown);
+                } catch (parseError) {
+                    console.error('Markdown 解析错误:', parseError);
+                    throw new Error(`Markdown 解析失败: ${parseError.message}`);
+                }
+
+                const html = `
+                    <div class="content-header">
+                        <h1>${note ? note.title : filename.replace('.md', '')}</h1>
+                        <div class="meta">${note ? note.date : ''}</div>
+                    </div>
+                    <div class="content-body">
+                        ${htmlContent}
+                    </div>
+                `;
+
+                contentArea.innerHTML = html;
+
+                // 高亮代码
+                try {
+                    contentArea.querySelectorAll('pre code').forEach(block => {
+                        hljs.highlightElement(block);
+                    });
+                } catch (highlightError) {
+                    console.warn('代码高亮错误:', highlightError);
+                }
+
+                // 更新 URL（不刷新页面）
+                const url = new URL(window.location);
+                url.searchParams.set('file', filename);
+                window.history.pushState({}, '', url);
+            } catch (error) {
+                console.error('渲染错误:', error);
+                const contentArea = document.getElementById('content-area');
+                contentArea.innerHTML = `
+                    <div class="error">
+                        <h2>渲染失败</h2>
+                        <p>错误信息: ${error.message}</p>
+                    </div>`;
+            }
+        }
+
+        // 检查依赖库是否加载
+        function checkDependencies() {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js 库未加载，请检查网络连接');
+            }
+            if (typeof hljs === 'undefined') {
+                console.warn('highlight.js 库未加载，代码高亮可能不可用');
+            }
         }
 
         // 初始化
         function init() {
-            renderSidebar();
-            
-            // 检查 URL 参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const file = urlParams.get('file');
-            
-            if (file && notes.find(n => n.file === file)) {
-                loadNote(file);
-            } else if (notes.length > 0) {
-                // 默认加载第一篇文章
-                loadNote(notes[0].file);
+            try {
+                checkDependencies();
+                renderSidebar();
+
+                // 检查 URL 参数
+                const urlParams = new URLSearchParams(window.location.search);
+                const file = urlParams.get('file');
+
+                if (file && notes.find(n => n.file === file)) {
+                    loadNote(file);
+                } else if (notes.length > 0) {
+                    // 默认加载第一篇文章
+                    loadNote(notes[0].file);
+                } else {
+                    document.getElementById('content-area').innerHTML =
+                        '<div class="error">没有找到任何文章</div>';
+                }
+            } catch (error) {
+                console.error('初始化错误:', error);
+                document.getElementById('content-area').innerHTML =
+                    `<div class="error">初始化失败: ${error.message}</div>`;
             }
         }
 
         // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', init);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            // 如果 DOM 已经加载完成，直接初始化
+            init();
+        }
     </script>
 </body>
+
 </html>
