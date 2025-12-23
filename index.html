@@ -96,6 +96,50 @@
             color: #95a5a6;
         }
 
+        /* 目录标题（可折叠） */
+        .sidebar-category-title {
+            padding: 12px 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #ecf0f1;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            user-select: none;
+        }
+
+        .sidebar-category-title:hover {
+            background: #34495e;
+        }
+
+        .sidebar-category-title.collapsed .category-icon {
+            transform: rotate(-90deg);
+        }
+
+        .category-icon {
+            margin-right: 8px;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+
+        .category-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .category-content.collapsed {
+            max-height: 0;
+        }
+
+        .sidebar-subtitle {
+            padding-left: 40px;
+            font-size: 0.8em;
+            color: #7f8c8d;
+        }
+
         /* 右侧内容区 */
         .main-content {
             flex: 1;
@@ -300,33 +344,8 @@
     </div>
 
     <script>
-        // 所有文章列表（按日期排序，最新的在前）
-        const notes = [
-            { file: "2025-12-22 为什么坚持永不卖出.md", date: "2025-12-22", title: "为什么坚持永不卖出" },
-            { file: "2025-12-22 定投里程碑.md", date: "2025-12-22", title: "定投里程碑" },
-            { file: "2025-12-22 恒生科技的长期配置意义.md", date: "2025-12-22", title: "恒生科技的长期配置意义" },
-            { file: "2025-12-19 人生如投资.md", date: "2025-12-19", title: "人生如投资" },
-            { file: "2025-12-18 又是被暴击的一天.md", date: "2025-12-18", title: "又是被暴击的一天" },
-            { file: "2025-12-18 基金份额历史.md", date: "2025-12-18", title: "基金份额历史" },
-            { file: "2025-12-18 基金记账本.md", date: "2025-12-18", title: "基金记账本" },
-            { file: "2025-12-16 如何长期持有.md", date: "2025-12-16", title: "如何长期持有" },
-            { file: "2025-12-16 个人资产配置.md", date: "2025-12-16", title: "个人资产配置" },
-            { file: "2025-12-16 2026战略.md", date: "2025-12-16", title: "2026战略" },
-            { file: "2025-12-15 不要融资，不要加杠杆.md", date: "2025-12-15", title: "不要融资，不要加杠杆" },
-            { file: "2025-12-15 横盘的思考.md", date: "2025-12-15", title: "横盘的思考" },
-            { file: "2025-12-14 为什么不配置科创50.md", date: "2025-12-14", title: "为什么不配置科创50" },
-            { file: "2025-12-14 投资要趁早.md", date: "2025-12-14", title: "投资要趁早" },
-            { file: "2025-12-14 A股选择主动基金.md", date: "2025-12-14", title: "A股选择主动基金" },
-            { file: "2025-12-14  防守资产.md", date: "2025-12-14", title: "防守资产" },
-            { file: "2025-12-14  白酒行业分析.md", date: "2025-12-14", title: "白酒行业分析" },
-            { file: "2025-12-14  投资解决焦虑.md", date: "2025-12-14", title: "投资解决焦虑" },
-            { file: "2025-12-14  恒生科技.md", date: "2025-12-14", title: "恒生科技" },
-            { file: "2025-12-14  定投方式.md", date: "2025-12-14", title: "定投方式" },
-            { file: "2025-12-14  如何看待下跌.md", date: "2025-12-14", title: "如何看待下跌" },
-            { file: "2025-12-14  如何选择投资平台.md", date: "2025-12-14", title: "如何选择投资平台" },
-            { file: "2025-12-14  A股配置.md", date: "2025-12-14", title: "A股配置" },
-            { file: "health/2025-12-14  如何早睡.md", date: "2025-12-14", title: "如何早睡", category: "健康" }
-        ];
+        // 文件列表（从 file-list.json 加载）
+        let notes = [];
 
         // 获取基础路径（用于 GitHub Pages）- 必须在其他函数之前声明
         let basePathCache = null;
@@ -385,53 +404,136 @@
             }
         });
 
-        // 生成目录
+        // 生成目录（支持多级目录结构）
         function renderSidebar() {
             const sidebarContent = document.getElementById('sidebar-content');
-            const groupedNotes = {};
 
-            // 按日期分组
+            // 按目录和日期分组
+            const categoryMap = {};
+            const rootNotes = [];
+
             notes.forEach(note => {
-                const month = note.date.substring(0, 7); // YYYY-MM
-                if (!groupedNotes[month]) {
-                    groupedNotes[month] = [];
+                if (note.category) {
+                    // 有目录的文件
+                    if (!categoryMap[note.category]) {
+                        categoryMap[note.category] = [];
+                    }
+                    categoryMap[note.category].push(note);
+                } else {
+                    // 根目录的文件
+                    rootNotes.push(note);
                 }
-                groupedNotes[month].push(note);
             });
 
-            // 按月份排序（最新的在前）
-            const sortedMonths = Object.keys(groupedNotes).sort().reverse();
-
-            sortedMonths.forEach(month => {
-                const section = document.createElement('div');
-                section.className = 'sidebar-section';
-
-                const title = document.createElement('div');
-                title.className = 'sidebar-section-title';
-                title.textContent = month;
-                section.appendChild(title);
-
-                groupedNotes[month].forEach(note => {
-                    const item = document.createElement('div');
-                    item.className = 'sidebar-item';
-                    item.dataset.file = note.file;
-                    item.onclick = () => loadNote(note.file);
-
-                    const itemTitle = document.createElement('div');
-                    itemTitle.className = 'sidebar-item-title';
-                    itemTitle.textContent = note.title;
-
-                    const itemDate = document.createElement('div');
-                    itemDate.className = 'sidebar-item-date';
-                    itemDate.textContent = note.date;
-
-                    item.appendChild(itemTitle);
-                    item.appendChild(itemDate);
-                    section.appendChild(item);
+            // 渲染根目录文件（按日期分组）
+            if (rootNotes.length > 0) {
+                const rootGrouped = {};
+                rootNotes.forEach(note => {
+                    const month = note.date ? note.date.substring(0, 7) : '未分类';
+                    if (!rootGrouped[month]) {
+                        rootGrouped[month] = [];
+                    }
+                    rootGrouped[month].push(note);
                 });
 
-                sidebarContent.appendChild(section);
+                const sortedMonths = Object.keys(rootGrouped).sort().reverse();
+                sortedMonths.forEach(month => {
+                    const section = createDateSection(month, rootGrouped[month]);
+                    sidebarContent.appendChild(section);
+                });
+            }
+
+            // 渲染各个目录
+            const sortedCategories = Object.keys(categoryMap).sort();
+            sortedCategories.forEach(category => {
+                const categorySection = createCategorySection(category, categoryMap[category]);
+                sidebarContent.appendChild(categorySection);
             });
+        }
+
+        // 创建日期分组区域
+        function createDateSection(month, notesInMonth) {
+            const section = document.createElement('div');
+            section.className = 'sidebar-section';
+
+            const title = document.createElement('div');
+            title.className = 'sidebar-section-title';
+            title.textContent = month;
+            section.appendChild(title);
+
+            notesInMonth.forEach(note => {
+                const item = createNoteItem(note);
+                section.appendChild(item);
+            });
+
+            return section;
+        }
+
+        // 创建目录分组区域
+        function createCategorySection(category, notesInCategory) {
+            const section = document.createElement('div');
+            section.className = 'sidebar-section';
+
+            // 目录标题（可折叠）
+            const categoryTitle = document.createElement('div');
+            categoryTitle.className = 'sidebar-category-title';
+            categoryTitle.innerHTML = `<span class="category-icon">📁</span> ${category}`;
+            categoryTitle.onclick = () => {
+                const content = section.querySelector('.category-content');
+                content.classList.toggle('collapsed');
+                categoryTitle.classList.toggle('collapsed');
+            };
+            section.appendChild(categoryTitle);
+
+            // 目录内容
+            const categoryContent = document.createElement('div');
+            categoryContent.className = 'category-content';
+
+            // 按日期分组
+            const groupedByDate = {};
+            notesInCategory.forEach(note => {
+                const month = note.date ? note.date.substring(0, 7) : '未分类';
+                if (!groupedByDate[month]) {
+                    groupedByDate[month] = [];
+                }
+                groupedByDate[month].push(note);
+            });
+
+            const sortedMonths = Object.keys(groupedByDate).sort().reverse();
+            sortedMonths.forEach(month => {
+                const dateTitle = document.createElement('div');
+                dateTitle.className = 'sidebar-section-title sidebar-subtitle';
+                dateTitle.textContent = month;
+                categoryContent.appendChild(dateTitle);
+
+                groupedByDate[month].forEach(note => {
+                    const item = createNoteItem(note);
+                    categoryContent.appendChild(item);
+                });
+            });
+
+            section.appendChild(categoryContent);
+            return section;
+        }
+
+        // 创建文章项
+        function createNoteItem(note) {
+            const item = document.createElement('div');
+            item.className = 'sidebar-item';
+            item.dataset.file = note.file;
+            item.onclick = () => loadNote(note.file);
+
+            const itemTitle = document.createElement('div');
+            itemTitle.className = 'sidebar-item-title';
+            itemTitle.textContent = note.title;
+
+            const itemDate = document.createElement('div');
+            itemDate.className = 'sidebar-item-date';
+            itemDate.textContent = note.date || '';
+
+            item.appendChild(itemTitle);
+            item.appendChild(itemDate);
+            return item;
         }
 
         // 加载并渲染 Markdown 文件
@@ -559,6 +661,38 @@
             }
         }
 
+        // 加载文件列表
+        async function loadFileList() {
+            try {
+                const basePath = getBasePath();
+                const pathsToTry = [
+                    './file-list.json',
+                    'file-list.json',
+                    basePath ? `${basePath}/file-list.json` : 'file-list.json',
+                    basePath ? `/${basePath}/file-list.json` : '/file-list.json'
+                ];
+
+                for (const path of pathsToTry) {
+                    try {
+                        const response = await fetch(path);
+                        if (response.ok) {
+                            const data = await response.json();
+                            notes = data;
+                            console.log(`成功加载 ${notes.length} 个文件`);
+                            return true;
+                        }
+                    } catch (err) {
+                        console.log('尝试路径失败:', path);
+                        continue;
+                    }
+                }
+                throw new Error('无法加载 file-list.json');
+            } catch (error) {
+                console.error('加载文件列表失败:', error);
+                return false;
+            }
+        }
+
         // 检查依赖库是否加载
         function checkDependencies() {
             if (typeof marked === 'undefined') {
@@ -570,9 +704,21 @@
         }
 
         // 初始化
-        function init() {
+        async function init() {
             try {
                 checkDependencies();
+
+                // 先加载文件列表
+                const contentArea = document.getElementById('content-area');
+                contentArea.innerHTML = '<div class="loading">正在加载文件列表...</div>';
+
+                const loaded = await loadFileList();
+                if (!loaded) {
+                    contentArea.innerHTML = '<div class="error">无法加载文件列表，请确保 file-list.json 存在</div>';
+                    return;
+                }
+
+                // 渲染侧边栏
                 renderSidebar();
 
                 // 检查 URL 参数
@@ -585,8 +731,7 @@
                     // 默认加载第一篇文章
                     loadNote(notes[0].file);
                 } else {
-                    document.getElementById('content-area').innerHTML =
-                        '<div class="error">没有找到任何文章</div>';
+                    contentArea.innerHTML = '<div class="error">没有找到任何文章</div>';
                 }
             } catch (error) {
                 console.error('初始化错误:', error);
