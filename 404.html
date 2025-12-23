@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重定向中...</title>
+    <script>
+        // 获取当前路径
+        const path = window.location.pathname;
+
+        // 如果是 Markdown 文件，重定向到 index.html 并传递文件参数
+        if (path.endsWith('.md')) {
+            const filename = path.split('/').pop();
+            window.location.href = `index.html?file=${encodeURIComponent(filename)}`;
+        } else {
+            // 否则重定向到首页
+            window.location.href = 'index.html';
+        }
+    </script>
+</head>
+
+<body>
+    <p>正在重定向...</p>
+</body>
+
+</html>

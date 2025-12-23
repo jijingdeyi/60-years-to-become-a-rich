@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>60年投资笔记</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -17,133 +19,492 @@
             line-height: 1.6;
             color: #333;
             background: #f5f5f5;
-            padding: 20px;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .container {
+        /* 左侧目录 */
+        .sidebar {
+            width: 280px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: #34495e;
+            border-bottom: 1px solid #3d566e;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.2em;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85em;
+            color: #bdc3c7;
+        }
+
+        .sidebar-content {
+            padding: 10px 0;
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-section-title {
+            padding: 10px 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #95a5a6;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-item:hover {
+            background: #34495e;
+        }
+
+        .sidebar-item.active {
+            background: #34495e;
+            border-left-color: #3498db;
+        }
+
+        .sidebar-item-title {
+            font-size: 0.9em;
+            color: #ecf0f1;
+            margin-bottom: 3px;
+        }
+
+        .sidebar-item-date {
+            font-size: 0.75em;
+            color: #95a5a6;
+        }
+
+        /* 右侧内容区 */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            background: #fff;
+        }
+
+        .content-wrapper {
             max-width: 900px;
             margin: 0 auto;
-            background: white;
             padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        h1 {
+        .content-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .content-header h1 {
+            font-size: 2em;
             color: #2c3e50;
             margin-bottom: 10px;
-            border-bottom: 3px solid #3498db;
+        }
+
+        .content-header .meta {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .content-body {
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .content-body h1,
+        .content-body h2,
+        .content-body h3,
+        .content-body h4 {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .content-body h1 {
+            font-size: 1.8em;
+            border-bottom: 2px solid #ecf0f1;
             padding-bottom: 10px;
         }
 
-        .subtitle {
-            color: #7f8c8d;
-            margin-bottom: 30px;
+        .content-body h2 {
+            font-size: 1.5em;
         }
 
-        .section {
-            margin: 30px 0;
-        }
-
-        .section h2 {
-            color: #34495e;
-            margin-bottom: 15px;
+        .content-body h3 {
             font-size: 1.3em;
         }
 
-        ul {
-            list-style: none;
+        .content-body p {
+            margin-bottom: 15px;
         }
 
-        li {
+        .content-body ul,
+        .content-body ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        .content-body li {
             margin: 8px 0;
         }
 
-        a {
-            color: #3498db;
-            text-decoration: none;
-            display: inline-block;
-            padding: 5px 0;
-            transition: color 0.3s;
+        .content-body blockquote {
+            border-left: 4px solid #3498db;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-style: italic;
         }
 
-        a:hover {
-            color: #2980b9;
-            text-decoration: underline;
+        .content-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
         }
 
-        .date-badge {
-            display: inline-block;
-            background: #ecf0f1;
-            padding: 2px 8px;
+        .content-body table th,
+        .content-body table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .content-body table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .content-body code {
+            background: #f4f4f4;
+            padding: 2px 6px;
             border-radius: 3px;
-            font-size: 0.85em;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .content-body pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .content-body pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
             color: #7f8c8d;
-            margin-right: 10px;
+        }
+
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: #e74c3c;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+
+            .content-wrapper {
+                padding: 20px;
+            }
+        }
+
+        /* 滚动条样式 */
+        .sidebar::-webkit-scrollbar,
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track,
+        .main-content::-webkit-scrollbar-track {
+            background: #34495e;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #7f8c8d;
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 4px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
         }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <h1>60年投资笔记</h1>
-        <p class="subtitle">个人投资思考与策略记录</p>
+    <!-- 左侧目录 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>📚 60年投资笔记</h1>
+            <p>个人投资思考与策略记录</p>
+        </div>
+        <div class="sidebar-content" id="sidebar-content">
+            <!-- 目录将通过 JavaScript 动态生成 -->
+        </div>
+    </div>
 
-        <div class="section">
-            <h2>📚 所有文章</h2>
-            <ul id="notes-list"></ul>
+    <!-- 右侧内容区 -->
+    <div class="main-content">
+        <div class="content-wrapper">
+            <div id="content-area">
+                <div class="loading">正在加载...</div>
+            </div>
         </div>
     </div>
 
     <script>
-        // 获取所有 Markdown 文件
+        // 所有文章列表（按日期排序，最新的在前）
         const notes = [
-            "2025-12-22 为什么坚持永不卖出.md",
-            "2025-12-22 定投里程碑.md",
-            "2025-12-22 恒生科技的长期配置意义.md",
-            "2025-12-19 人生如投资.md",
-            "2025-12-18 又是被暴击的一天.md",
-            "2025-12-18 基金份额历史.md",
-            "2025-12-18 基金记账本.md",
-            "2025-12-16 如何长期持有.md",
-            "2025-12-16 个人资产配置.md",
-            "2025-12-16 2026战略.md",
-            "2025-12-15 横盘的思考.md",
-            "2025-12-15 不要融资，不要加杠杆.md",
-            "2025-12-14 投资要趁早.md",
-            "2025-12-14 为什么不配置科创50.md",
-            "2025-12-14 如何选择投资平台.md",
-            "2025-12-14 恒生科技.md",
-            "2025-12-14 投资解决焦虑.md",
-            "2025-12-14 白酒行业分析.md",
-            "2025-12-14 防守资产.md",
-            "2025-12-14 A股选择主动基金.md",
-            "2025-12-14  A股配置.md",
-            "2025-12-14  如何看待下跌.md",
-            "2025-12-14  如何选择投资平台.md",
-            "2025-12-14  定投方式.md",
-            "2025-12-14  恒生科技.md",
-            "2025-12-14  投资解决焦虑.md",
-            "2025-12-14  白酒行业分析.md",
-            "2025-12-14  防守资产.md",
-            "notes.md",
-            "emojis.md"
+            { file: "2025-12-22 为什么坚持永不卖出.md", date: "2025-12-22", title: "为什么坚持永不卖出" },
+            { file: "2025-12-22 定投里程碑.md", date: "2025-12-22", title: "定投里程碑" },
+            { file: "2025-12-22 恒生科技的长期配置意义.md", date: "2025-12-22", title: "恒生科技的长期配置意义" },
+            { file: "2025-12-19 人生如投资.md", date: "2025-12-19", title: "人生如投资" },
+            { file: "2025-12-18 又是被暴击的一天.md", date: "2025-12-18", title: "又是被暴击的一天" },
+            { file: "2025-12-18 基金份额历史.md", date: "2025-12-18", title: "基金份额历史" },
+            { file: "2025-12-18 基金记账本.md", date: "2025-12-18", title: "基金记账本" },
+            { file: "2025-12-16 如何长期持有.md", date: "2025-12-16", title: "如何长期持有" },
+            { file: "2025-12-16 个人资产配置.md", date: "2025-12-16", title: "个人资产配置" },
+            { file: "2025-12-16 2026战略.md", date: "2025-12-16", title: "2026战略" },
+            { file: "2025-12-15 不要融资，不要加杠杆.md", date: "2025-12-15", title: "不要融资，不要加杠杆" },
+            { file: "2025-12-15 横盘的思考.md", date: "2025-12-15", title: "横盘的思考" },
+            { file: "2025-12-14 为什么不配置科创50.md", date: "2025-12-14", title: "为什么不配置科创50" },
+            { file: "2025-12-14 投资要趁早.md", date: "2025-12-14", title: "投资要趁早" },
+            { file: "2025-12-14 A股选择主动基金.md", date: "2025-12-14", title: "A股选择主动基金" },
+            { file: "2025-12-14  防守资产.md", date: "2025-12-14", title: "防守资产" },
+            { file: "2025-12-14  白酒行业分析.md", date: "2025-12-14", title: "白酒行业分析" },
+            { file: "2025-12-14  投资解决焦虑.md", date: "2025-12-14", title: "投资解决焦虑" },
+            { file: "2025-12-14  恒生科技.md", date: "2025-12-14", title: "恒生科技" },
+            { file: "2025-12-14  定投方式.md", date: "2025-12-14", title: "定投方式" },
+            { file: "2025-12-14  如何看待下跌.md", date: "2025-12-14", title: "如何看待下跌" },
+            { file: "2025-12-14  如何选择投资平台.md", date: "2025-12-14", title: "如何选择投资平台" },
+            { file: "2025-12-14  A股配置.md", date: "2025-12-14", title: "A股配置" },
+            { file: "health/2025-12-14  如何早睡.md", date: "2025-12-14", title: "如何早睡", category: "健康" }
         ];
 
-        const list = document.getElementById('notes-list');
-        notes.forEach(note => {
-            const li = document.createElement('li');
-            const match = note.match(/(\d{4}-\d{2}-\d{2})/);
-            const date = match ? match[1] : '';
-            const title = note.replace(/^\d{4}-\d{2}-\d{2}\s*/, '').replace('.md', '');
-
-            li.innerHTML = `
-                ${date ? `<span class="date-badge">${date}</span>` : ''}
-                <a href="${note}">${title}</a>
-            `;
-            list.appendChild(li);
+        // 配置 marked
+        const renderer = new marked.Renderer();
+        
+        // 修复图片路径
+        renderer.image = function(href, title, text) {
+            // 在渲染时获取基础路径
+            const basePath = getBasePath();
+            const imagePath = href.startsWith('http') ? href : (basePath ? `${basePath}/${href}` : href);
+            return `<img src="${imagePath}" alt="${text}" title="${title || ''}" style="max-width: 100%; height: auto; margin: 20px 0;">`;
+        };
+        
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            renderer: renderer,
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(code, { language: lang }).value;
+                    } catch (err) {}
+                }
+                return hljs.highlightAuto(code).value;
+            }
         });
+        
+        // 初始化基础路径缓存
+        getBasePath();
+
+        // 生成目录
+        function renderSidebar() {
+            const sidebarContent = document.getElementById('sidebar-content');
+            const groupedNotes = {};
+            
+            // 按日期分组
+            notes.forEach(note => {
+                const month = note.date.substring(0, 7); // YYYY-MM
+                if (!groupedNotes[month]) {
+                    groupedNotes[month] = [];
+                }
+                groupedNotes[month].push(note);
+            });
+
+            // 按月份排序（最新的在前）
+            const sortedMonths = Object.keys(groupedNotes).sort().reverse();
+
+            sortedMonths.forEach(month => {
+                const section = document.createElement('div');
+                section.className = 'sidebar-section';
+                
+                const title = document.createElement('div');
+                title.className = 'sidebar-section-title';
+                title.textContent = month;
+                section.appendChild(title);
+
+                groupedNotes[month].forEach(note => {
+                    const item = document.createElement('div');
+                    item.className = 'sidebar-item';
+                    item.dataset.file = note.file;
+                    item.onclick = () => loadNote(note.file);
+                    
+                    const itemTitle = document.createElement('div');
+                    itemTitle.className = 'sidebar-item-title';
+                    itemTitle.textContent = note.title;
+                    
+                    const itemDate = document.createElement('div');
+                    itemDate.className = 'sidebar-item-date';
+                    itemDate.textContent = note.date;
+                    
+                    item.appendChild(itemTitle);
+                    item.appendChild(itemDate);
+                    section.appendChild(item);
+                });
+
+                sidebarContent.appendChild(section);
+            });
+        }
+
+        // 获取基础路径（用于 GitHub Pages）
+        let basePathCache = null;
+        function getBasePath() {
+            if (basePathCache !== null) return basePathCache;
+            
+            const path = window.location.pathname;
+            // 如果路径包含仓库名（不是直接在根域名下），提取基础路径
+            const parts = path.split('/').filter(p => p);
+            if (parts.length > 0 && parts[0] !== 'index.html') {
+                // 找到 index.html 的位置
+                const indexPos = path.indexOf('/index.html');
+                if (indexPos > 0) {
+                    basePathCache = path.substring(0, indexPos);
+                    return basePathCache;
+                }
+            }
+            basePathCache = '';
+            return '';
+        }
+
+        // 加载并渲染 Markdown 文件
+        async function loadNote(filename) {
+            const contentArea = document.getElementById('content-area');
+            contentArea.innerHTML = '<div class="loading">正在加载...</div>';
+
+            // 更新活动状态
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.file === filename) {
+                    item.classList.add('active');
+                }
+            });
+
+            try {
+                const basePath = getBasePath();
+                const filePath = basePath ? `${basePath}/${filename}` : filename;
+                
+                const response = await fetch(filePath);
+                if (!response.ok) {
+                    // 如果失败，尝试直接使用文件名
+                    const retryResponse = await fetch(filename);
+                    if (!retryResponse.ok) {
+                        throw new Error(`文件未找到: ${filePath}`);
+                    }
+                    const markdown = await retryResponse.text();
+                    await renderContent(markdown, filename);
+                    return;
+                }
+                
+                const markdown = await response.text();
+                await renderContent(markdown, filename);
+            } catch (error) {
+                contentArea.innerHTML = `<div class="error">加载失败: ${error.message}</div>`;
+            }
+        }
+
+        // 渲染内容
+        async function renderContent(markdown, filename) {
+            const contentArea = document.getElementById('content-area');
+            const note = notes.find(n => n.file === filename);
+            
+            const html = `
+                <div class="content-header">
+                    <h1>${note ? note.title : filename.replace('.md', '')}</h1>
+                    <div class="meta">${note ? note.date : ''}</div>
+                </div>
+                <div class="content-body">
+                    ${marked.parse(markdown)}
+                </div>
+            `;
+            
+            contentArea.innerHTML = html;
+            
+            // 高亮代码
+            contentArea.querySelectorAll('pre code').forEach(block => {
+                hljs.highlightElement(block);
+            });
+
+            // 更新 URL（不刷新页面）
+            const url = new URL(window.location);
+            url.searchParams.set('file', filename);
+            window.history.pushState({}, '', url);
+        }
+
+        // 初始化
+        function init() {
+            renderSidebar();
+            
+            // 检查 URL 参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const file = urlParams.get('file');
+            
+            if (file && notes.find(n => n.file === file)) {
+                loadNote(file);
+            } else if (notes.length > 0) {
+                // 默认加载第一篇文章
+                loadNote(notes[0].file);
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
-
 </html>
