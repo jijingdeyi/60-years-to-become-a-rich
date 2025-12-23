@@ -328,6 +328,38 @@
             { file: "health/2025-12-14  如何早睡.md", date: "2025-12-14", title: "如何早睡", category: "健康" }
         ];
 
+        // 获取基础路径（用于 GitHub Pages）- 必须在其他函数之前声明
+        let basePathCache = null;
+        function getBasePath() {
+            if (basePathCache !== null) return basePathCache;
+
+            const path = window.location.pathname;
+            console.log('当前路径:', path);
+
+            // 如果路径包含仓库名（不是直接在根域名下），提取基础路径
+            const parts = path.split('/').filter(p => p);
+
+            // 找到 index.html 的位置
+            const indexPos = path.indexOf('/index.html');
+            if (indexPos > 0) {
+                basePathCache = path.substring(0, indexPos);
+                console.log('检测到基础路径:', basePathCache);
+                return basePathCache;
+            }
+
+            // 如果没有 index.html，检查是否有其他路径段（可能是仓库名）
+            // 例如：/money/ 或 /money
+            if (parts.length > 0 && parts[0] !== 'index.html' && !parts[0].endsWith('.html')) {
+                basePathCache = '/' + parts[0];
+                console.log('检测到基础路径（无index.html）:', basePathCache);
+                return basePathCache;
+            }
+
+            basePathCache = '';
+            console.log('使用空基础路径');
+            return '';
+        }
+
         // 配置 marked
         const renderer = new marked.Renderer();
 
@@ -352,9 +384,6 @@
                 return hljs.highlightAuto(code).value;
             }
         });
-
-        // 初始化基础路径缓存
-        getBasePath();
 
         // 生成目录
         function renderSidebar() {
@@ -403,38 +432,6 @@
 
                 sidebarContent.appendChild(section);
             });
-        }
-
-        // 获取基础路径（用于 GitHub Pages）
-        let basePathCache = null;
-        function getBasePath() {
-            if (basePathCache !== null) return basePathCache;
-
-            const path = window.location.pathname;
-            console.log('当前路径:', path);
-
-            // 如果路径包含仓库名（不是直接在根域名下），提取基础路径
-            const parts = path.split('/').filter(p => p);
-
-            // 找到 index.html 的位置
-            const indexPos = path.indexOf('/index.html');
-            if (indexPos > 0) {
-                basePathCache = path.substring(0, indexPos);
-                console.log('检测到基础路径:', basePathCache);
-                return basePathCache;
-            }
-
-            // 如果没有 index.html，检查是否有其他路径段（可能是仓库名）
-            // 例如：/money/ 或 /money
-            if (parts.length > 0 && parts[0] !== 'index.html' && !parts[0].endsWith('.html')) {
-                basePathCache = '/' + parts[0];
-                console.log('检测到基础路径（无index.html）:', basePathCache);
-                return basePathCache;
-            }
-
-            basePathCache = '';
-            console.log('使用空基础路径');
-            return '';
         }
 
         // 加载并渲染 Markdown 文件
