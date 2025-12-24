@@ -271,6 +271,47 @@
             color: #e74c3c;
         }
 
+        /* 移动端切换按钮 */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: all 0.3s;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .sidebar-toggle span {
+            display: block;
+            line-height: 1;
+        }
+
+        .sidebar-toggle:hover {
+            background: #2980b9;
+            transform: scale(1.1);
+        }
+
+        .sidebar-toggle.active {
+            background: #e74c3c;
+        }
+
+        .sidebar-toggle.active:hover {
+            background: #c0392b;
+        }
+
         /* 响应式设计 */
         @media (max-width: 768px) {
             body {
@@ -278,12 +319,50 @@
             }
 
             .sidebar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 width: 100%;
-                max-height: 200px;
+                max-height: 70vh;
+                transform: translateY(100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 999;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+                border-radius: 20px 20px 0 0;
+            }
+
+            .sidebar.show {
+                transform: translateY(0);
+            }
+
+            .main-content {
+                width: 100%;
+                padding-bottom: 80px; /* 为底部按钮留出空间 */
             }
 
             .content-wrapper {
                 padding: 20px;
+            }
+
+            .sidebar-toggle {
+                display: flex;
+            }
+
+            /* 当侧边栏显示时，添加遮罩层 */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 998;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
             }
         }
 
@@ -323,8 +402,11 @@
 </head>
 
 <body>
+    <!-- 遮罩层（移动端） -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <!-- 左侧目录 -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h1>📚 60年投资笔记</h1>
             <p>个人投资思考与策略记录</p>
@@ -342,6 +424,11 @@
             </div>
         </div>
     </div>
+
+    <!-- 移动端切换按钮 -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="切换目录">
+        <span id="toggle-icon">📚</span>
+    </button>
 
     <script>
         // 文件列表（从 file-list.json 加载）
@@ -610,6 +697,80 @@
             }
         }
 
+        // 处理图片路径（将相对路径转换为绝对路径）
+        function fixImagePaths(htmlContent, filename) {
+            const basePath = getBasePath();
+            const fileDir = filename.includes('/') ? filename.substring(0, filename.lastIndexOf('/')) : '';
+            
+            // 创建临时容器
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // 处理所有 img 标签
+            tempDiv.querySelectorAll('img').forEach(img => {
+                let src = img.getAttribute('src');
+                if (!src) return;
+                
+                const originalSrc = src;
+                
+                // 如果是完整 URL，跳过
+                if (src.startsWith('http://') || src.startsWith('https://')) {
+                    return;
+                }
+                
+                // 处理相对路径
+                if (src.startsWith('../')) {
+                    // 从文件目录向上查找
+                    let pathParts = fileDir.split('/').filter(p => p);
+                    let relativeParts = src.split('/').filter(p => p);
+                    
+                    // 移除 .. 并向上导航
+                    let resultParts = [...pathParts];
+                    for (let part of relativeParts) {
+                        if (part === '..') {
+                            if (resultParts.length > 0) {
+                                resultParts.pop();
+                            }
+                        } else if (part !== '.') {
+                            resultParts.push(part);
+                        }
+                    }
+                    
+                    src = resultParts.join('/');
+                } else if (src.startsWith('./')) {
+                    // 相对于当前文件目录
+                    src = src.substring(2);
+                    if (fileDir) {
+                        src = fileDir + '/' + src;
+                    }
+                } else if (src.startsWith('/')) {
+                    // 绝对路径（从仓库根目录），移除前导斜杠
+                    src = src.substring(1);
+                } else {
+                    // 相对路径，相对于当前文件目录
+                    if (fileDir) {
+                        src = fileDir + '/' + src;
+                    }
+                }
+                
+                // 添加基础路径（如果需要）
+                if (basePath) {
+                    // 确保路径格式正确
+                    const cleanBasePath = basePath.startsWith('/') ? basePath.substring(1) : basePath;
+                    src = cleanBasePath + '/' + src;
+                } else {
+                    // 使用相对路径
+                    src = './' + src;
+                }
+                
+                // 更新 src 属性
+                img.setAttribute('src', src);
+                console.log('修复图片路径:', originalSrc, '->', src, '(文件:', filename, ')');
+            });
+            
+            return tempDiv.innerHTML;
+        }
+
         // 渲染内容
         async function renderContent(markdown, filename) {
             try {
@@ -624,6 +785,9 @@
                     console.error('Markdown 解析错误:', parseError);
                     throw new Error(`Markdown 解析失败: ${parseError.message}`);
                 }
+
+                // 修复图片路径
+                htmlContent = fixImagePaths(htmlContent, filename);
 
                 const html = `
                     <div class="content-header">
@@ -740,12 +904,83 @@
             }
         }
 
+        // 移动端目录切换功能
+        function setupSidebarToggle() {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('sidebar-toggle');
+            const overlay = document.getElementById('sidebar-overlay');
+            const toggleIcon = document.getElementById('toggle-icon');
+
+            function toggleSidebar() {
+                // 只在移动端执行
+                if (window.innerWidth > 768) {
+                    return;
+                }
+                
+                sidebar.classList.toggle('show');
+                overlay.classList.toggle('show');
+                toggle.classList.toggle('active');
+                
+                // 更新图标
+                if (sidebar.classList.contains('show')) {
+                    toggleIcon.textContent = '✕';
+                } else {
+                    toggleIcon.textContent = '📚';
+                }
+            }
+
+            // 点击按钮切换
+            if (toggle) {
+                toggle.addEventListener('click', toggleSidebar);
+            }
+
+            // 点击遮罩层关闭
+            if (overlay) {
+                overlay.addEventListener('click', toggleSidebar);
+            }
+
+            // 点击目录项后自动关闭（移动端）
+            const sidebarContent = document.getElementById('sidebar-content');
+            if (sidebarContent) {
+                sidebarContent.addEventListener('click', (e) => {
+                    // 检查是否是移动端
+                    if (window.innerWidth <= 768) {
+                        // 如果点击的是文章项，关闭目录
+                        if (e.target.closest('.sidebar-item')) {
+                            setTimeout(() => {
+                                toggleSidebar();
+                            }, 300); // 延迟一点，让用户看到选中效果
+                        }
+                    }
+                });
+            }
+
+            // 窗口大小改变时，重置状态
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    if (window.innerWidth > 768) {
+                        // 桌面端：移除移动端样式
+                        sidebar.classList.remove('show');
+                        overlay.classList.remove('show');
+                        toggle.classList.remove('active');
+                        toggleIcon.textContent = '📚';
+                    }
+                }, 100);
+            });
+        }
+
         // 页面加载完成后初始化
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
+            document.addEventListener('DOMContentLoaded', () => {
+                init();
+                setupSidebarToggle();
+            });
         } else {
             // 如果 DOM 已经加载完成，直接初始化
             init();
+            setupSidebarToggle();
         }
     </script>
 </body>
