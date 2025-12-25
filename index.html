@@ -821,6 +821,13 @@
                 const url = new URL(window.location);
                 url.searchParams.set('file', filename);
                 window.history.pushState({}, '', url);
+
+                // 内容渲染完成后，检查按钮显示状态（针对无法滚动的页面）
+                setTimeout(() => {
+                    if (window.updateToggleVisibility) {
+                        window.updateToggleVisibility();
+                    }
+                }, 300);
             } catch (error) {
                 console.error('渲染错误:', error);
                 const contentArea = document.getElementById('content-area');
@@ -988,6 +995,12 @@
                 }, 100);
             });
 
+            // 检测页面是否可以滚动
+            function canScroll() {
+                const scrollElement = mainContent || document.documentElement;
+                return scrollElement.scrollHeight > scrollElement.clientHeight;
+            }
+
             // 滚动时自动隐藏/显示按钮（移动端）
             let scrollTimer = null;
             const mainContent = document.querySelector('.main-content');
@@ -996,6 +1009,12 @@
             function handleScroll() {
                 // 只在移动端执行
                 if (window.innerWidth > 768 || !toggle) {
+                    return;
+                }
+
+                // 如果页面无法滚动，按钮始终显示
+                if (!canScroll()) {
+                    toggle.classList.remove('hidden');
                     return;
                 }
 
@@ -1009,7 +1028,10 @@
 
                 // 设置定时器：停止滚动后自动隐藏
                 scrollTimer = setTimeout(() => {
-                    toggle.classList.add('hidden');
+                    // 再次检查是否可以滚动
+                    if (canScroll()) {
+                        toggle.classList.add('hidden');
+                    }
                 }, HIDE_DELAY);
             }
 
@@ -1020,10 +1042,48 @@
                 window.addEventListener('scroll', handleScroll, { passive: true });
             }
 
-            // 初始状态：隐藏按钮（不滚动时）
+            // 初始状态检查
             if (toggle && window.innerWidth <= 768) {
-                toggle.classList.add('hidden');
+                // 如果页面无法滚动，按钮始终显示
+                if (!canScroll()) {
+                    toggle.classList.remove('hidden');
+                } else {
+                    toggle.classList.add('hidden');
+                }
             }
+
+            // 检查并更新按钮显示状态（暴露到全局，供其他函数调用）
+            window.updateToggleVisibility = function() {
+                if (window.innerWidth > 768 || !toggle) {
+                    return;
+                }
+                
+                // 如果页面无法滚动，按钮始终显示
+                if (!canScroll()) {
+                    toggle.classList.remove('hidden');
+                }
+            };
+
+            // 内容加载完成后检查一次
+            setTimeout(window.updateToggleVisibility, 500);
+            
+            // 监听内容区域变化（使用 MutationObserver）
+            if (mainContent) {
+                const observer = new MutationObserver(() => {
+                    setTimeout(window.updateToggleVisibility, 100);
+                });
+                observer.observe(mainContent, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                });
+            }
+
+            // 窗口大小改变时也检查
+            window.addEventListener('resize', () => {
+                setTimeout(window.updateToggleVisibility, 100);
+            });
         }
 
         // 页面加载完成后初始化
